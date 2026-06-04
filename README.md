@@ -38,8 +38,8 @@ anything themselves.
 - Docker + Docker Compose (for local validation only)
 
 > **Two admin domains are involved and are often owned by different people:**
-> - Steps 1–3 (app registration, API permissions, admin consent) require an **Azure AD admin**
-> - Steps 4–5 (Teams app upload, add to channel) require a **Teams admin**
+> - Steps 1–5 (Azure Bot, API permissions, admin consent) require an **Azure AD admin**
+> - Steps 6–7 (Teams app upload, add to channel) require a **Teams admin**
 >
 > Identify both people before starting.
 
@@ -47,26 +47,46 @@ anything themselves.
 
 ## Azure setup (required once)
 
-### 1 — App registration
+### 1 — Create an Azure Bot
 
-In [Azure Portal](https://portal.azure.com) → App registrations → New registration:
+Go to [Create an Azure Bot](https://portal.azure.com/#create/Microsoft.AzureBot) in the Azure Portal and fill in the **Basics** tab:
 
-- Name: something like `teleport-msteams-plugin`
-- Supported account types: Single tenant
-- Redirect URI: leave blank
+- **Bot handle**: `teleport-msteams-plugin` (or any unique name — this is just a label)
+- **Subscription** and **Resource group**: use your existing subscription; create a new resource group named after the bot handle
+- **Data residency**: Global
+- **Pricing tier**: Standard
+- **Type of App**: Single Tenant
+- **Creation type**: Create new Microsoft App ID
 
-Note the **Application (client) ID** and **Directory (tenant) ID** from the Overview page.
+Click **Review + create**, then **Create**. Azure automatically creates an app registration alongside the bot resource — you do not need to create one separately.
 
-Under **Certificates & secrets** → New client secret. Save the secret value immediately —
-you cannot retrieve it again. Write it to `app-secret`:
+### 2 — Note your App ID and Tenant ID
+
+Once deployed, open the bot resource → **Settings** → **Configuration**:
+
+- **Microsoft App ID** — this is your `<AZURE_APP_ID>`
+- **App Tenant ID** — this is your `<AZURE_TENANT_ID>`
+
+Save both values. You will need them for the plugin config and the `configure` command.
+
+### 3 — Create a client secret
+
+From the Configuration page, click **Manage Password** next to the Microsoft App ID. This opens the app registration's **Certificates & secrets** page.
+
+Click **+ New client secret**:
+- **Description**: `teleport-msteams-plugin`
+- **Expires**: 730 days (24 months)
+
+Click **Add**. Copy the **Value** column immediately — it is only shown once and cannot be retrieved again. Save it to `app-secret`:
 
 ```bash
 echo -n '<client secret value>' > app-secret
 ```
 
-### 2 — API permissions
+### 4 — API permissions
 
-Under **API permissions** → Add a permission → Microsoft Graph → Application permissions.
+Still in the app registration (the same page you reached via Manage Password), go to
+**API permissions** → **Add a permission** → **Microsoft Graph** → **Application permissions**.
 
 Add exactly these four permissions:
 
@@ -84,20 +104,14 @@ The status column should show green checkmarks for all four.
 > All four use the **Self** variant — the plugin can only manage its own app's installation,
 > never any other app. This is the least-privilege set.
 
-### 3 — Azure Bot resource
+### 5 — Add the Microsoft Teams channel
 
-In Azure Portal → Azure Bot → Create:
+Back in the bot resource → **Settings** → **Channels** → add **Microsoft Teams**. Accept
+the terms of service.
 
-- Bot handle: any name (e.g. `teleport-msteams-bot`)
-- Type: Single tenant
-- Microsoft App ID: select **Use existing app registration** → enter the App ID from step 1
+This registers the bot with the Teams platform so it can send cards via the Bot Framework API.
 
-Once created, go to **Channels** → add **Microsoft Teams**. Accept the terms of service.
-
-This wires the Bot Framework messaging endpoint to your app registration, which is what
-allows the plugin to send cards via the Bot API.
-
-### 4 — Generate and patch the Teams app package
+### 6 — Generate and patch the Teams app package
 
 Generate `app.zip` using the plugin's Docker image (no binary install needed):
 
@@ -140,7 +154,7 @@ zip -j ../app-patched.zip color.png manifest.json outline.png
 cd ../..
 ```
 
-### 5 — Upload to Teams Admin Center and add to a channel
+### 7 — Upload to Teams Admin Center and add to a channel
 
 This step requires a **Teams Administrator** or **Global Admin**.
 
