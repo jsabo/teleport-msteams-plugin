@@ -1,0 +1,10 @@
+# Creates the msteams-plugin bot with the built-in access-plugin role.
+# Apply once: tctl create -f rbac.yaml
+# Then generate a join token:
+#   tctl bots instances add msteams-plugin --format=json | jq -r '.token_id' > token
+kind: bot
+version: v1
+metadata:
+  name: msteams-plugin
+spec:
+  roles: [access-plugin]

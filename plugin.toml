@@ -1,0 +1,19 @@
+preload = true
+
+[teleport]
+addr             = "<TELEPORT_PROXY>"
+identity         = "/identity/identity"
+refresh_identity = true
+
+[msapi]
+app_id       = "<AZURE_APP_ID>"
+app_secret   = "/etc/plugin/app-secret"
+tenant_id    = "<AZURE_TENANT_ID>"
+teams_app_id = "<TEAMS_APP_ID>"
+
+[role_to_recipients]
+"*" = ["<TEAMS_CHANNEL_URL>"]
+
+[log]
+output   = "stderr"
+severity = "INFO"

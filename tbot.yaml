@@ -1,0 +1,16 @@
+version: v2
+proxy_server: <TELEPORT_PROXY>
+
+onboarding:
+  join_method: token
+  token: /etc/tbot/token
+
+storage:
+  type: directory
+  path: /var/lib/tbot
+
+outputs:
+  - type: identity
+    destination:
+      type: directory
+      path: /identity

@@ -1,0 +1,24 @@
+services:
+  tbot:
+    image: public.ecr.aws/gravitational/tbot-distroless:${TELEPORT_VERSION}
+    volumes:
+      - ./tbot.yaml:/etc/tbot.yaml:ro
+      - ./token:/etc/tbot/token:ro
+      - tbot-state:/var/lib/tbot
+      - identity:/identity
+    command: [start, -c, /etc/tbot.yaml]
+
+  msteams:
+    image: public.ecr.aws/gravitational/teleport-plugin-msteams:${TELEPORT_VERSION}
+    volumes:
+      - identity:/identity:ro
+      - ./plugin.toml:/etc/teleport-msteams.toml:ro
+      - ./app-secret:/etc/plugin/app-secret:ro
+    command: [start, --config=/etc/teleport-msteams.toml]
+    restart: on-failure
+    depends_on:
+      - tbot
+
+volumes:
+  tbot-state:
+  identity:

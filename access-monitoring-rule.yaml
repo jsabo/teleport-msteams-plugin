@@ -1,0 +1,24 @@
+---
+kind: access_monitoring_rule
+version: v1
+metadata:
+  name: msteams-channel-example
+spec:
+  subjects: [access_request]
+  condition: 'access_request.spec.roles.contains("<ROLE_NAME>")'
+  notification:
+    name: msteams
+    recipients:
+      - "<TEAMS_CHANNEL_URL>"
+---
+kind: access_monitoring_rule
+version: v1
+metadata:
+  name: msteams-dm-example
+spec:
+  subjects: [access_request]
+  condition: 'access_request.spec.roles.contains("<ROLE_NAME>")'
+  notification:
+    name: msteams
+    recipients:
+      - "user@example.com"
