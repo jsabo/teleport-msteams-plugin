@@ -134,9 +134,21 @@ TeamsAppID: <generated-uuid>
 
 Two files are written to `assets/`. Generate `plugin.toml` from the output and fix the Docker paths in one step:
 
+**macOS:**
 ```bash
 cp assets/teleport-msteams.toml plugin.toml
 sed -i '' \
+  -e 's|addr = "localhost:3025"|addr = "<TELEPORT_PROXY>"|' \
+  -e 's|identity = "identity"|identity = "/identity/identity"|' \
+  -e 's|# refresh_identity = true.*$|refresh_identity = true|' \
+  -e 's|app_secret = ".*"|app_secret = "/etc/plugin/app-secret"|' \
+  plugin.toml
+```
+
+**Linux:**
+```bash
+cp assets/teleport-msteams.toml plugin.toml
+sed -i \
   -e 's|addr = "localhost:3025"|addr = "<TELEPORT_PROXY>"|' \
   -e 's|identity = "identity"|identity = "/identity/identity"|' \
   -e 's|# refresh_identity = true.*$|refresh_identity = true|' \
