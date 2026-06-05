@@ -132,38 +132,40 @@ On success you will see:
 TeamsAppID: <generated-uuid>
 ```
 
-Two files are written to `assets/` and the `TeamsAppID` is printed to stdout. Auto-populate `plugin.toml` with it:
+Two files are written to `assets/`. Generate `plugin.toml` from the output and fix the Docker paths in one step:
 
 ```bash
-export TEAMS_APP_ID=$(grep 'teams_app_id' assets/teleport-msteams.toml | grep -oE '[a-f0-9-]{36}')
-sed -i '' "s|<TEAMS_APP_ID>|${TEAMS_APP_ID}|g" plugin.toml
-echo "TeamsAppID: ${TEAMS_APP_ID}"
+cp assets/teleport-msteams.toml plugin.toml
+sed -i '' \
+  -e 's|addr = "localhost:3025"|addr = "<TELEPORT_PROXY>"|' \
+  -e 's|identity = "identity"|identity = "/identity/identity"|' \
+  -e 's|app_secret = ".*"|app_secret = "/etc/plugin/app-secret"|' \
+  plugin.toml
 ```
 
-> **Not idempotent:** each run generates a new `TeamsAppID`. If you re-run `configure`, run `rm -rf assets` first, then re-patch `plugin.toml` with the new ID.
+Then open `plugin.toml` and:
+- Add `refresh_identity = true` below the `identity` line
+- Replace `"*" = ["foo@example.com"]` under `[role_to_recipients]` with your Teams channel URL
+
+> **Not idempotent:** each run generates a new `TeamsAppID`. If you re-run `configure`, run `rm -rf assets` first and repeat this step.
 
 **Patch the manifest to enable DM delivery:**
 
-The generated manifest only includes `"scopes": ["team"]`. Without adding `"personal"`, DM delivery silently fails regardless of permissions. Run this to patch and repack:
+The generated manifest only includes `"scopes": ["team"]`. Without adding `"personal"`, DM delivery silently fails regardless of permissions.
 
 ```bash
-cd assets
-unzip -q app.zip -d app-unpacked
-python3 -c "
-import json
-with open('app-unpacked/manifest.json') as f:
-    m = json.load(f)
-for bot in m.get('bots', []):
-    if 'personal' not in bot.get('scopes', []):
-        bot['scopes'].append('personal')
-v = m['version'].split('.')
-v[-1] = str(int(v[-1]) + 1)
-m['version'] = '.'.join(v)
-with open('app-unpacked/manifest.json', 'w') as f:
-    json.dump(m, f, indent=2)
-print('Version bumped to', m['version'])
-"
-cd app-unpacked && zip -j ../app-patched.zip color.png manifest.json outline.png && cd ..
+cd assets && unzip -q app.zip -d app-unpacked
+```
+
+Open `assets/app-unpacked/manifest.json` in a text editor and make two changes:
+
+1. Find `"scopes": ["team"]` inside the `bots` array and change it to `"scopes": ["team", "personal"]`
+2. Bump the `"version"` field by one patch (e.g. `"1.0.0"` → `"1.0.1"`)
+
+Then repack:
+
+```bash
+cd assets/app-unpacked && zip -j ../app-patched.zip color.png manifest.json outline.png && cd ../..
 echo "Ready to upload: assets/app-patched.zip"
 ```
 
@@ -258,38 +260,6 @@ tctl bots instances add msteams-plugin --format=json | jq -r '.token_id' > token
 > The token is single-use. tbot consumes it on first join and stores its identity in the
 > `tbot-state` Docker volume. As long as that volume persists, no new token is needed.
 > Generate a new one only after a volume wipe (`docker compose down -v`).
-
-### Values to fill in
-
-Collect these before editing config files:
-
-| Placeholder | Where to find it |
-|---|---|
-| `<TELEPORT_PROXY>` | Your cluster address, e.g. `acme.teleport.sh:443` |
-| `<AZURE_APP_ID>` | Azure Portal → App registrations → your app → Application (client) ID |
-| `<AZURE_TENANT_ID>` | Azure Portal → App registrations → your app → Directory (tenant) ID |
-| `<TEAMS_APP_ID>` | Output of the `configure` command in step 4 |
-| `<TEAMS_CHANNEL_URL>` | Teams → right-click channel → Get link to channel |
-
-To replace all placeholders at once:
-
-```bash
-export TELEPORT_PROXY="acme.teleport.sh:443"
-export AZURE_APP_ID="..."
-export AZURE_TENANT_ID="..."
-export TEAMS_APP_ID="..."       # from assets/teleport-msteams.toml after step 4
-export TEAMS_CHANNEL_URL="..."  # after uploading app in step 5
-
-sed -i '' \
-  -e "s|<TELEPORT_PROXY>|${TELEPORT_PROXY}|g" \
-  -e "s|<AZURE_APP_ID>|${AZURE_APP_ID}|g" \
-  -e "s|<AZURE_TENANT_ID>|${AZURE_TENANT_ID}|g" \
-  -e "s|<TEAMS_APP_ID>|${TEAMS_APP_ID}|g" \
-  -e "s|<TEAMS_CHANNEL_URL>|${TEAMS_CHANNEL_URL}|g" \
-  plugin.toml tbot.yaml
-```
-
-> `sed -i ''` is macOS syntax. On Linux, use `sed -i` (no trailing `''`).
 
 ### Files
 
