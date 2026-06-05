@@ -77,11 +77,7 @@ Click **+ New client secret**:
 - **Description**: `teleport-msteams-plugin`
 - **Expires**: 730 days (24 months)
 
-Click **Add**. Copy the **Value** column immediately — it is only shown once and cannot be retrieved again. Save it to `app-secret`:
-
-```bash
-echo -n '<client secret value>' > app-secret
-```
+Click **Add**. Copy the **Value** column immediately — it is only shown once and cannot be retrieved again. Save it somewhere secure (password manager, notes); you will need it in several places later.
 
 ### 4 — API permissions
 
@@ -90,16 +86,15 @@ Still in the app registration (reached via **Manage Password** in the previous s
 
 Click **+ Add a permission** → **Microsoft Graph** → **Application permissions**.
 
-A search box appears at the top of the permissions panel. **Search by name** — do not try
-to scroll the full list. Add these four permissions one at a time, clicking **Add permissions**
-after each:
+A search box appears at the top of the permissions panel — use it, the full list is enormous.
+Add these four permissions one at a time, clicking **Add permissions** after each:
 
-| Search for | Permission | Purpose |
-|---|---|---|
-| `AppCatalog.Read.All` | `AppCatalog.Read.All` | Find TeleBot in the org app catalog |
-| `User.Read.All` | `User.Read.All` | Resolve recipient email to Azure AD user ID |
-| `TeamsAppInstallation.ReadWriteSelfForUser` | `TeamsAppInstallation.ReadWriteSelfForUser.All` | Auto-install TeleBot for DM recipients + get chat ID |
-| `TeamsAppInstallation.ReadWriteSelfForTeam` | `TeamsAppInstallation.ReadWriteSelfForTeam.All` | Check TeleBot installation in teams (for channel posting) |
+| Permission | Purpose |
+|---|---|
+| `AppCatalog.Read.All` | Used to list Teams apps and check if the app is installed |
+| `User.Read.All` | Used to get notification recipients |
+| `TeamsAppInstallation.ReadWriteSelfForUser.All` | Used to initiate communication with a user that never interacted with the Teams app before |
+| `TeamsAppInstallation.ReadWriteSelfForTeam.All` | Used to discover if the app is installed in the team |
 
 Once all four appear in the **Configured permissions** table, click
 **Grant admin consent for \<tenant\>** at the top of the table. This requires
@@ -231,6 +226,12 @@ Use the Docker Compose setup to confirm your Azure configuration is correct befo
 instead of using the Cloud plugin. This is also the easiest way to debug delivery issues.
 
 ### Teleport setup (validation only)
+
+Write your Azure app secret to the `app-secret` file (this is mounted into the plugin container):
+
+```bash
+echo -n '<client secret value>' > app-secret
+```
 
 ```bash
 # Create the bot using the built-in access-plugin role — no custom role needed
