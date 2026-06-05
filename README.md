@@ -130,12 +130,22 @@ docker run --rm \
 
 > If you need to re-run `configure`, remove the output directory first: `rm -rf assets`
 
-This outputs `assets/teleport-msteams.toml` (initial plugin config) and `assets/app.zip`
-(the Teams app package). Note the `teams_app_id` value from the generated TOML — you will
-need it later.
+On success you will see:
 
-> **Not idempotent:** each run generates a new `teams_app_id` UUID. The config and zip
-> are a matched pair. If you regenerate one, you must regenerate both and re-upload.
+```
+[1] Created target directory: /workspace/assets
+[2] Created /workspace/assets/app.zip
+
+TeamsAppID: <generated-uuid>
+```
+
+**Copy the `TeamsAppID` value** — this is your `<TEAMS_APP_ID>`. You will need it when filling in `plugin.toml` and when enrolling the Cloud-hosted plugin.
+
+Two files are written to `assets/`:
+- `app.zip` — the Teams app package to upload in the next step
+- `teleport-msteams.toml` — generated for reference; note it embeds the secret in plaintext, so use the `plugin.toml` in this repo instead (it references the secret via file path)
+
+> **Not idempotent:** each run generates a new `TeamsAppID` UUID. If you re-run `configure`, you must re-upload `app.zip` to Teams Admin Center and update `<TEAMS_APP_ID>` everywhere. Run `rm -rf assets` before re-running.
 
 **Patch the manifest for personal scope (required for DM delivery):**
 
