@@ -1,8 +1,8 @@
 # teleport-msteams-plugin
 
-Setup guide for the [Teleport MS Teams access request plugin](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/). Covers Azure Bot and Teams app configuration, Cloud plugin enrollment, and recipient routing via Access Monitoring Rules.
+Setup guide for the [Teleport MS Teams access request plugin](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/). Covers Azure Bot configuration, Cloud plugin enrollment, Teams app upload, and recipient routing via Access Monitoring Rules.
 
-The Docker Compose setup at the bottom of this guide is a troubleshooting tool — use it if the Cloud plugin isn't delivering notifications and you need to isolate whether the issue is Azure permissions, the Teams app installation, or something else.
+The Docker Compose setup at the bottom of this guide is a troubleshooting tool — use it if the Cloud plugin isn't delivering notifications and you need to isolate whether the issue is Azure permissions, the Teams app installation, or the plugin itself.
 
 ---
 
@@ -75,43 +75,39 @@ Once all four appear in the **Configured permissions** table, click **Grant admi
 
 ---
 
-## 5 — Generate and patch the Teams app package
+## Enable the Cloud-hosted plugin
 
-Generate `app.zip` using the plugin's Docker image (no binary install needed):
+> See the [official Teleport MS Teams plugin docs](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/) for full reference.
 
-```bash
-source .env
-docker run --rm \
-  -v "$(pwd):/workspace" \
-  public.ecr.aws/gravitational/teleport-plugin-msteams:${TELEPORT_VERSION} \
-  configure /workspace/assets \
-  --appID  "<AZURE_APP_ID>" \
-  --tenantID "<AZURE_TENANT_ID>" \
-  --appSecret "<client secret value>"
-```
+**Teleport Web UI → Integrations → Microsoft Teams → Enroll**
 
-> If you need to re-run `configure`, remove the output directory first: `rm -rf assets`
+Enter the values from the Azure setup:
 
-On success you will see:
+| Field | Value |
+|---|---|
+| App ID | `<AZURE_APP_ID>` |
+| Tenant ID | `<AZURE_TENANT_ID>` |
+| App secret | your client secret value |
+| TeamsApp ID | leave blank — Teleport generates one |
+| Default Recipient | a Teams channel URL (Teams → right-click channel → **Get link to channel**) |
 
-```
-[1] Created target directory: /workspace/assets
-[2] Created /workspace/assets/app.zip
+Click **Connect Microsoft Teams**. The plugin will show as **Failed** until the Teams app is uploaded in the next steps — that is expected.
 
-TeamsAppID: <generated-uuid>
-```
+---
 
-**Copy the `TeamsAppID`** — you will need it when enrolling the plugin.
+## Upload the Teams app
 
-**Patch the manifest to enable DM delivery:**
+### 5 — Download and patch the app package
 
-The generated manifest only includes `"scopes": ["team"]`. Without adding `"personal"`, DM delivery silently fails regardless of permissions.
+After enrolling, go to **Integrations → Microsoft Teams → Options → Download app.zip**.
+
+Teleport generates an `app.zip` containing the Teams app manifest. The manifest only includes `"scopes": ["team"]` — without adding `"personal"`, DM delivery silently fails regardless of permissions. Patch it before uploading:
 
 ```bash
-cd assets && unzip -q app.zip -d app-unpacked
+unzip -q ~/Downloads/app.zip -d ~/Downloads/app-unpacked
 ```
 
-Open `assets/app-unpacked/manifest.json` and make two changes:
+Open `~/Downloads/app-unpacked/manifest.json` and make two changes:
 
 1. Find `"scopes": ["team"]` inside the `bots` array and change it to `"scopes": ["team", "personal"]`
 2. Bump the `"version"` field by one patch (e.g. `"1.0.0"` → `"1.0.1"`)
@@ -119,18 +115,16 @@ Open `assets/app-unpacked/manifest.json` and make two changes:
 Then repack:
 
 ```bash
-cd assets/app-unpacked && zip -j ../app-patched.zip color.png manifest.json outline.png && cd ../..
-echo "Ready to upload: assets/app-patched.zip"
+cd ~/Downloads/app-unpacked && zip -j ../app-patched.zip color.png manifest.json outline.png
+echo "Ready to upload: ~/Downloads/app-patched.zip"
 ```
 
----
-
-## 6 — Upload to Teams Admin Center
+### 6 — Upload to Teams Admin Center and add to a channel
 
 This step requires a **Teams Administrator** or **Global Admin**.
 
 1. [Teams Admin Center](https://admin.teams.microsoft.com) → Teams apps → Manage apps →
-   **Upload new app** → select `assets/app-patched.zip`
+   **Upload new app** → select `~/Downloads/app-patched.zip`
 2. The app appears as "TeleBot" in the org app catalog. If your org requires admin
    approval for custom apps, approve it from the same page.
 3. Back in [Azure Portal](https://portal.azure.com), open the bot resource → **Settings** →
@@ -144,28 +138,11 @@ standard channel in that team. General is just the installation point — notifi
 whichever channel URL is configured in your recipients. Repeat for each team you want to
 receive channel notifications.
 
-> **Note:** Private channels are not supported. TeleBot installed at the team level can
-> only post to standard channels.
+> **Note:** Private channels are not supported. TeleBot installed at the team level can only post to standard channels.
+
+Once TeleBot is in the org catalog and installed in a team, the plugin status in Teleport will change from **Failed** to **Active**.
 
 ---
-
-## Enable the Cloud-hosted plugin
-
-With Azure and Teams configured, enroll the plugin in your Teleport cluster:
-
-**Teleport Web UI → Integrations → Microsoft Teams → Enroll**
-
-Enter the values collected during setup:
-
-| Field | Value |
-|---|---|
-| App ID | `<AZURE_APP_ID>` |
-| Tenant ID | `<AZURE_TENANT_ID>` |
-| TeamsApp ID | `<TeamsAppID>` from the `configure` output |
-| App secret | your client secret value |
-| Default Recipient | a Teams channel URL (Teams → right-click channel → Get link to channel) |
-
-The plugin shows **Active** once it can reach the Graph API and find TeleBot in the org catalog. The Cloud-hosted plugin manages its own identity — no tbot, no Docker, no infrastructure to maintain.
 
 ### Routing with Access Monitoring Rules
 
@@ -192,14 +169,14 @@ tctl create -f access-monitoring-rule.yaml
 
 AMR recipients override the Default Recipient when the condition matches. The `contains` predicate requires an exact role name match.
 
-> DM recipients must match the primary `mail` field in Azure AD — not proxy addresses or
-> `.onmicrosoft.com` aliases.
+> DM recipients must match the primary `mail` field in Azure AD — not proxy addresses or `.onmicrosoft.com` aliases.
 
 ---
 
 ## Troubleshooting with Docker Compose
 
-If the Cloud plugin isn't delivering notifications, use this setup to validate your Azure configuration end-to-end. It runs the plugin locally against your cluster so you can see exactly what's happening.
+If the Cloud plugin isn't delivering notifications, use this setup to validate your Azure configuration end-to-end. It runs the plugin locally so you can see exactly what's happening.
+See the [official docs](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/) for the full plugin reference.
 
 ### What you need
 
@@ -217,9 +194,34 @@ tctl bots instances add msteams-plugin --format=json | jq -r '.token_id' > token
 > The token is single-use. Once tbot joins, it stores its identity in the `tbot-state`
 > Docker volume and renews automatically. Generate a new token only after `docker compose down -v`.
 
-### Generate plugin.toml
+### Generate app.zip and plugin.toml
 
-After running `configure` (step 5), generate `plugin.toml` from the output and fix the Docker paths:
+The `configure` command generates a self-contained `app.zip` and TOML config. Use it when you want to run the plugin locally without enrolling via the Teleport UI:
+
+```bash
+source .env
+docker run --rm \
+  -v "$(pwd):/workspace" \
+  public.ecr.aws/gravitational/teleport-plugin-msteams:${TELEPORT_VERSION} \
+  configure /workspace/assets \
+  --appID  "<AZURE_APP_ID>" \
+  --tenantID "<AZURE_TENANT_ID>" \
+  --appSecret "<client secret value>"
+```
+
+> If you need to re-run `configure`, remove the output directory first: `rm -rf assets`
+
+On success:
+```
+[1] Created target directory: /workspace/assets
+[2] Created /workspace/assets/app.zip
+
+TeamsAppID: <generated-uuid>
+```
+
+Patch `assets/app.zip` the same way as the Cloud flow (add `"personal"` scope, bump version), then upload `assets/app-patched.zip` to Teams Admin Center.
+
+Generate `plugin.toml` from the configure output:
 
 **macOS:**
 ```bash
@@ -245,12 +247,14 @@ sed -i \
 
 > **Required:** Open `plugin.toml` and update `[role_to_recipients]` — replace `"*" = ["foo@example.com"]` with your Teams channel URL. The plugin will not deliver notifications without a valid recipient.
 
+Also update `<TELEPORT_PROXY>` in `tbot.yaml` with your cluster address.
+
 ### Files
 
 | File | Purpose |
 |---|---|
 | `docker-compose.yaml` | tbot + msteams plugin services |
-| `tbot.yaml` | tbot machine identity config — update `<TELEPORT_PROXY>` |
+| `tbot.yaml` | tbot machine identity config |
 | `plugin.toml` | Plugin config — generated from configure output, gitignored |
 | `rbac.yaml` | Teleport bot definition |
 | `.env` | Image version (`TELEPORT_VERSION`) |
