@@ -194,8 +194,10 @@ This step requires a **Teams Administrator** or **Global Admin**.
 4. In Teams: open the target team → Apps → search "TeleBot" → **Set up a bot** → Add
    to the team's General channel.
 
-Adding TeleBot to General grants it permission to post to all channels in that team.
-Repeat step 4 for each team you want to receive channel notifications.
+This installs TeleBot in the team, which is required before the plugin can post to any
+channel in that team. General is just the installation point — notifications go to
+whichever channel URL is configured in your recipients, not to General. Repeat for each
+team you want to receive channel notifications.
 
 ---
 
