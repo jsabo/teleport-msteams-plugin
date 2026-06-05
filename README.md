@@ -85,21 +85,28 @@ echo -n '<client secret value>' > app-secret
 
 ### 4 — API permissions
 
-Still in the app registration (the same page you reached via Manage Password), go to
-**API permissions** → **Add a permission** → **Microsoft Graph** → **Application permissions**.
+Still in the app registration (reached via **Manage Password** in the previous step), click
+**API permissions** in the left sidebar under **Manage**.
 
-Add exactly these four permissions:
+Click **+ Add a permission** → **Microsoft Graph** → **Application permissions**.
 
-| Permission | Purpose |
-|---|---|
-| `AppCatalog.Read.All` | Find TeleBot in the org app catalog |
-| `User.Read.All` | Resolve recipient email to Azure AD user ID |
-| `TeamsAppInstallation.ReadWriteSelfForUser.All` | Auto-install TeleBot for DM recipients + get chat ID |
-| `TeamsAppInstallation.ReadWriteSelfForTeam.All` | Check TeleBot installation in teams (for channel posting) |
+A search box appears at the top of the permissions panel. **Search by name** — do not try
+to scroll the full list. Add these four permissions one at a time, clicking **Add permissions**
+after each:
 
-After adding all four, click **Grant admin consent for \<tenant\>**. This requires
+| Search for | Permission | Purpose |
+|---|---|---|
+| `AppCatalog.Read.All` | `AppCatalog.Read.All` | Find TeleBot in the org app catalog |
+| `User.Read.All` | `User.Read.All` | Resolve recipient email to Azure AD user ID |
+| `TeamsAppInstallation.ReadWriteSelfForUser` | `TeamsAppInstallation.ReadWriteSelfForUser.All` | Auto-install TeleBot for DM recipients + get chat ID |
+| `TeamsAppInstallation.ReadWriteSelfForTeam` | `TeamsAppInstallation.ReadWriteSelfForTeam.All` | Check TeleBot installation in teams (for channel posting) |
+
+Once all four appear in the **Configured permissions** table, click
+**Grant admin consent for \<tenant\>** at the top of the table. This requires
 **Application Administrator**, **Cloud Application Administrator**, or **Global Admin**.
-The status column should show green checkmarks for all four.
+
+All four should show a green **Granted for \<tenant\>** status. If the button is greyed
+out, you do not have sufficient privileges — a tenant admin needs to complete this step.
 
 > All four use the **Self** variant — the plugin can only manage its own app's installation,
 > never any other app. This is the least-privilege set.
