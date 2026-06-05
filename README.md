@@ -107,10 +107,10 @@ Teleport generates an `app.zip` containing the Teams app manifest. The manifest 
 unzip -q ~/Downloads/app.zip -d ~/Downloads/app-unpacked
 ```
 
-Open `~/Downloads/app-unpacked/manifest.json` and make two changes:
+Open `~/Downloads/app-unpacked/manifest.json` and make these changes:
 
 1. Find `"scopes": ["team"]` inside the `bots` array and change it to `"scopes": ["team", "personal"]`
-2. Bump the `"version"` field by one patch (e.g. `"1.0.0"` → `"1.0.1"`)
+2. Bump the `"version"` field only if you are **re-uploading** an existing app — Teams Admin Center rejects uploads where the version hasn't changed. For a **first upload**, leave the version as-is.
 
 Then repack:
 
@@ -127,11 +127,15 @@ This step requires a **Teams Administrator** or **Global Admin**.
    **Upload new app** → select `~/Downloads/app-patched.zip`
 2. The app appears as "TeleBot" in the org app catalog. If your org requires admin
    approval for custom apps, approve it from the same page.
-3. Back in [Azure Portal](https://portal.azure.com), open the bot resource → **Settings** →
+3. In [Azure Portal](https://portal.azure.com), open the bot resource → **Settings** →
    **Channels** → add **Microsoft Teams**. Accept the terms of service. This connects the
-   bot to the Teams Bot Framework so it can send cards.
-4. In Teams: open the target team → Apps → search "TeleBot" → **Set up a bot** → Add
-   to the team's General channel.
+   bot to the Teams Bot Framework so it can send cards. Once added, an **Open in Teams**
+   link appears next to the Microsoft Teams channel.
+4. Click **Open in Teams**. This opens TeleBot's app card directly in Teams. Click **Add**,
+   then select the General channel of your target team.
+
+> **Do not search for "TeleBot" in the Teams app store** — the search returns public apps
+> only and will not find your org app. Use the **Open in Teams** link from the Azure Portal.
 
 This installs TeleBot in the team, which is required before the plugin can post to any
 standard channel in that team. General is just the installation point — notifications go to
@@ -140,7 +144,16 @@ receive channel notifications.
 
 > **Note:** Private channels are not supported. TeleBot installed at the team level can only post to standard channels.
 
-Once TeleBot is in the org catalog and installed in a team, the plugin status in Teleport will change from **Failed** to **Active**.
+Once TeleBot is in the org catalog and installed in a team, the plugin status will update.
+The health check runs once at startup — if the plugin shows **Failed** after completing
+these steps, trigger a recheck:
+
+```bash
+tctl get plugins --format text   # check current status
+tctl edit plugin/msteams         # opens editor; save without changes to trigger restart
+```
+
+After saving, run `tctl get plugins --format text` again — status should show `RUNNING`.
 
 ---
 
