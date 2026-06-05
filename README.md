@@ -156,7 +156,7 @@ sed -i \
   plugin.toml
 ```
 
-Then open `plugin.toml` and replace `"*" = ["foo@example.com"]` under `[role_to_recipients]` with your Teams channel URL.
+> **Required:** Open `plugin.toml` and update the `[role_to_recipients]` section. Replace the placeholder `"*" = ["foo@example.com"]` with your actual Teams channel URL (get it from Teams → right-click channel → **Get link to channel**). The plugin will not deliver notifications without a valid recipient configured.
 
 > **Not idempotent:** each run generates a new `TeamsAppID`. If you re-run `configure`, run `rm -rf assets` first and repeat this step.
 
