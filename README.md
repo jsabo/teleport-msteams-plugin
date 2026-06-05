@@ -7,7 +7,7 @@ plugin.
 
 **The production deployment is the [Cloud-hosted plugin](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/)** — no self-hosting required. Once
 the Azure setup is complete and the validate command succeeds, paste the same credentials
-into Teleport Web UI (Integrations → Microsoft Teams) and it goes Healthy.
+into Teleport Web UI (Integrations → Microsoft Teams) and the plugin will be ready to deliver access request notifications.
 
 ---
 
