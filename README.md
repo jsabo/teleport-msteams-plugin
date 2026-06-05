@@ -139,13 +139,12 @@ cp assets/teleport-msteams.toml plugin.toml
 sed -i '' \
   -e 's|addr = "localhost:3025"|addr = "<TELEPORT_PROXY>"|' \
   -e 's|identity = "identity"|identity = "/identity/identity"|' \
+  -e 's|# refresh_identity = true.*$|refresh_identity = true|' \
   -e 's|app_secret = ".*"|app_secret = "/etc/plugin/app-secret"|' \
   plugin.toml
 ```
 
-Then open `plugin.toml` and:
-- Add `refresh_identity = true` below the `identity` line
-- Replace `"*" = ["foo@example.com"]` under `[role_to_recipients]` with your Teams channel URL
+Then open `plugin.toml` and replace `"*" = ["foo@example.com"]` under `[role_to_recipients]` with your Teams channel URL.
 
 > **Not idempotent:** each run generates a new `TeamsAppID`. If you re-run `configure`, run `rm -rf assets` first and repeat this step.
 
