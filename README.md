@@ -38,8 +38,8 @@ anything themselves.
 - Docker + Docker Compose (for local validation only)
 
 > **Two admin domains are involved and are often owned by different people:**
-> - Steps 1–5 (Azure Bot, API permissions, admin consent) require an **Azure AD admin**
-> - Steps 6–7 (Teams app upload, add to channel) require a **Teams admin**
+> - Steps 1–4 (Azure Bot, API permissions, admin consent) require an **Azure AD admin**
+> - Steps 5–6 (Teams app upload, add to channel) require a **Teams admin**
 >
 > Identify both people before starting.
 
@@ -106,14 +106,7 @@ out, you do not have sufficient privileges — a tenant admin needs to complete 
 > All four use the **Self** variant — the plugin can only manage its own app's installation,
 > never any other app. This is the least-privilege set.
 
-### 5 — Add the Microsoft Teams channel
-
-Back in the bot resource → **Settings** → **Channels** → add **Microsoft Teams**. Accept
-the terms of service.
-
-This registers the bot with the Teams platform so it can send cards via the Bot Framework API.
-
-### 6 — Generate and patch the Teams app package
+### 5 — Generate and patch the Teams app package
 
 Generate `app.zip` using the plugin's Docker image (no binary install needed):
 
@@ -139,35 +132,42 @@ On success you will see:
 TeamsAppID: <generated-uuid>
 ```
 
-**Copy the `TeamsAppID` value** — this is your `<TEAMS_APP_ID>`. You will need it when filling in `plugin.toml` and when enrolling the Cloud-hosted plugin.
+Two files are written to `assets/` and the `TeamsAppID` is printed to stdout. Auto-populate `plugin.toml` with it:
 
-Two files are written to `assets/`:
-- `app.zip` — the Teams app package to upload in the next step
-- `teleport-msteams.toml` — generated for reference; note it embeds the secret in plaintext, so use the `plugin.toml` in this repo instead (it references the secret via file path)
+```bash
+export TEAMS_APP_ID=$(grep 'teams_app_id' assets/teleport-msteams.toml | grep -oE '[a-f0-9-]{36}')
+sed -i '' "s|<TEAMS_APP_ID>|${TEAMS_APP_ID}|g" plugin.toml
+echo "TeamsAppID: ${TEAMS_APP_ID}"
+```
 
-> **Not idempotent:** each run generates a new `TeamsAppID` UUID. If you re-run `configure`, you must re-upload `app.zip` to Teams Admin Center and update `<TEAMS_APP_ID>` everywhere. Run `rm -rf assets` before re-running.
+> **Not idempotent:** each run generates a new `TeamsAppID`. If you re-run `configure`, run `rm -rf assets` first, then re-patch `plugin.toml` with the new ID.
 
-**Patch the manifest for personal scope (required for DM delivery):**
+**Patch the manifest to enable DM delivery:**
 
-The generated manifest only includes `"scopes": ["team"]`, which enables channel posting
-but not DMs. Without adding `"personal"`, DM delivery silently fails regardless of permissions.
+The generated manifest only includes `"scopes": ["team"]`. Without adding `"personal"`, DM delivery silently fails regardless of permissions. Run this to patch and repack:
 
 ```bash
 cd assets
-unzip app.zip -d app-unpacked
-
-# Edit app-unpacked/manifest.json:
-#   1. If updating an existing Teams app: set "id" to your existing teams_app_id
-#      (so Teams Admin Center recognizes this as an update, not a new app)
-#   2. Change "scopes": ["team"]  →  "scopes": ["team", "personal"]
-#   3. Bump "version" (e.g. "1.0.0" → "1.0.1") so Teams Admin Center accepts the upload
-
-cd app-unpacked
-zip -j ../app-patched.zip color.png manifest.json outline.png
-cd ../..
+unzip -q app.zip -d app-unpacked
+python3 -c "
+import json
+with open('app-unpacked/manifest.json') as f:
+    m = json.load(f)
+for bot in m.get('bots', []):
+    if 'personal' not in bot.get('scopes', []):
+        bot['scopes'].append('personal')
+v = m['version'].split('.')
+v[-1] = str(int(v[-1]) + 1)
+m['version'] = '.'.join(v)
+with open('app-unpacked/manifest.json', 'w') as f:
+    json.dump(m, f, indent=2)
+print('Version bumped to', m['version'])
+"
+cd app-unpacked && zip -j ../app-patched.zip color.png manifest.json outline.png && cd ..
+echo "Ready to upload: assets/app-patched.zip"
 ```
 
-### 7 — Upload to Teams Admin Center and add to a channel
+### 6 — Upload to Teams Admin Center
 
 This step requires a **Teams Administrator** or **Global Admin**.
 
@@ -175,11 +175,14 @@ This step requires a **Teams Administrator** or **Global Admin**.
    **Upload new app** → select `assets/app-patched.zip`
 2. The app appears as "TeleBot" in the org app catalog. If your org requires admin
    approval for custom apps, approve it from the same page.
-3. In Teams: open the target team → Apps → search "TeleBot" → **Set up a bot** → Add
+3. Back in [Azure Portal](https://portal.azure.com), open the bot resource → **Settings** →
+   **Channels** → add **Microsoft Teams**. Accept the terms of service. This connects the
+   bot to the Teams Bot Framework so it can send cards.
+4. In Teams: open the target team → Apps → search "TeleBot" → **Set up a bot** → Add
    to the team's General channel.
 
 Adding TeleBot to General grants it permission to post to all channels in that team.
-Repeat step 3 for each team you want to receive channel notifications.
+Repeat step 4 for each team you want to receive channel notifications.
 
 ---
 
