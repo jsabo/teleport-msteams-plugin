@@ -118,7 +118,6 @@ This registers the bot with the Teams platform so it can send cards via the Bot 
 Generate `app.zip` using the plugin's Docker image (no binary install needed):
 
 ```bash
-mkdir assets
 source .env
 docker run --rm \
   -v "$(pwd)/assets:/tmp/assets" \
@@ -128,6 +127,8 @@ docker run --rm \
   --tenantID "<AZURE_TENANT_ID>" \
   --appSecret "<client secret value>"
 ```
+
+> If you need to re-run `configure`, remove the output directory first: `rm -rf assets`
 
 This outputs `assets/teleport-msteams.toml` (initial plugin config) and `assets/app.zip`
 (the Teams app package). Note the `teams_app_id` value from the generated TOML — you will
