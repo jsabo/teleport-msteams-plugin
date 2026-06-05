@@ -5,7 +5,7 @@ plugin. Walks through Azure and Teams configuration, then uses Docker Compose + 
 validate that everything is wired up correctly before enabling the Teleport Cloud-hosted
 plugin.
 
-**The production deployment is the Cloud-hosted plugin** — no self-hosting required. Once
+**The production deployment is the [Cloud-hosted plugin](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/)** — no self-hosting required. Once
 the Azure setup is complete and the validate command succeeds, paste the same credentials
 into Teleport Web UI (Integrations → Microsoft Teams) and it goes Healthy.
 
@@ -201,6 +201,8 @@ Repeat step 4 for each team you want to receive channel notifications.
 
 ## Enable the Cloud-hosted plugin
 
+> See the [official Teleport MS Teams plugin docs](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/) for full reference.
+
 With Azure and Teams configured, enable the plugin in your Teleport cluster:
 
 1. Teleport Web UI → Integrations → Microsoft Teams → Enroll
@@ -218,7 +220,7 @@ infrastructure to maintain.
 ### Routing with Access Monitoring Rules
 
 The Cloud plugin supports a single default recipient. For per-role routing to multiple
-channels or users, use Access Monitoring Rules. The plugin name is `msteams`.
+channels or users, use [Access Monitoring Rules](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/). The plugin name is `msteams`.
 
 ```yaml
 kind: access_monitoring_rule
@@ -251,6 +253,7 @@ predicate requires an exact role name match.
 
 Use the Docker Compose setup to confirm your Azure configuration is correct before or
 instead of using the Cloud plugin. This is also the easiest way to debug delivery issues.
+See the [official docs](https://goteleport.com/docs/identity-governance/access-requests/plugins/msteams/) for the full plugin reference.
 
 ### Teleport setup (validation only)
 
