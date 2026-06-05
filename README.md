@@ -120,9 +120,9 @@ Generate `app.zip` using the plugin's Docker image (no binary install needed):
 ```bash
 source .env
 docker run --rm \
-  -v "$(pwd)/assets:/tmp/assets" \
+  -v "$(pwd):/workspace" \
   public.ecr.aws/gravitational/teleport-plugin-msteams:${TELEPORT_VERSION} \
-  configure /tmp/assets \
+  configure /workspace/assets \
   --appID  "<AZURE_APP_ID>" \
   --tenantID "<AZURE_TENANT_ID>" \
   --appSecret "<client secret value>"
